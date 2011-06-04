@@ -171,6 +171,13 @@ aircrack-ng -z -b BSSID output*.cap
 	os.system("/etc/init.d/avahi-daemon start")
 
 def main():
+	print "+------------------------+"
+	print "+                        +"
+	print "+      WEPAutoCrack      +"
+	print "+        by zx2c4        +"
+	print "+                        +"
+	print "+------------------------+"
+	print
 	if len(sys.argv) != 2:
 		print "You must supply the wifi card name as an argument."
 		return
