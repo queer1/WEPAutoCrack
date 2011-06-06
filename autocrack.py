@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+#
+# Copyright 2011 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+#
+#
 # --------- WEPAutoCrack ----------
 #             by zx2c4
 # ---------------------------------
@@ -11,17 +15,16 @@
 # for cracking WEP passwords, and finally resets your daemons once you've
 # found a password.
 #
-# greetz to gohu for iwlist parsing code at
-# https://bbs.archlinux.org/viewtopic.php?pid=737357
-#
-# Copyright 2011 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
-
 # Be sure to look at the pwn() function. There are /etc/init.d/ commands in
 # there to shutdown and startup your system's networking services. Here you
 # will find how I have my gentoo box setup, but you'll likely need to
 # change it to suit your own needs. It should be trivial -- stopping and
 # starting NetworkManager, if you use that, or whatever your situation
 # is. There are two "CHANGE ME" blocks below. Find them. Edit them.
+#
+# greetz to gohu for iwlist parsing code at
+# https://bbs.archlinux.org/viewtopic.php?pid=737357
+#
 
 import sys
 import subprocess
