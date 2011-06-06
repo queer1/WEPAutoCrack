@@ -1,5 +1,28 @@
 #!/usr/bin/env python
 
+# --------- WEPAutoCrack ----------
+#             by zx2c4
+# ---------------------------------
+#
+# This utility terminates disruptive daemons, scans for networks,
+# places your wifi card into monitor mode, switches to the right channel,
+# and builds a "choose your own adventure" instruction sequence for the
+# particular access point you choose to crack, for use with aircrack-ng
+# for cracking WEP passwords, and finally resets your daemons once you've
+# found a password.
+#
+# greetz to gohu for iwlist parsing code at
+# https://bbs.archlinux.org/viewtopic.php?pid=737357
+#
+# Copyright 2011 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+
+# Be sure to look at the pwn() function. There are /etc/init.d/ commands in
+# there to shutdown and startup your system's networking services. Here you
+# will find how I have my gentoo box setup, but you'll likely need to
+# change it to suit your own needs. It should be trivial -- stopping and
+# starting NetworkManager, if you use that, or whatever your situation
+# is. There are two "CHANGE ME" blocks below. Find them. Edit them.
+
 import sys
 import subprocess
 import os
@@ -99,9 +122,12 @@ def print_cells(cells):
 
 def pwn(interface, network):
 	print "[+] Shutting down services"
+
+	# BEGIN CHANGE ME
 	os.system("/etc/init.d/wpa_supplicant stop")
 	os.system("/etc/init.d/dhcpcd stop")
 	os.system("/etc/init.d/avahi-daemon stop")
+	# END CHANGE ME
 	print "[+] Acquiring MAC address:",
 	f = open("/sys/class/net/%s/address" % interface, "r")
 	realMac = f.read().strip().upper()
@@ -166,9 +192,11 @@ aircrack-ng -z -b BSSID output*.cap
 	os.system("iwconfig %s mode managed" % interface)
 	os.system("ifconfig %s up" % interface)
 	print "[+] Starting stopped services"
+	# BEGIN CHANGE ME
 	os.system("/etc/init.d/wpa_supplicant start")
 	os.system("/etc/init.d/dhcpcd start")
 	os.system("/etc/init.d/avahi-daemon start")
+	# END CHANGE ME
 
 def main():
 	print "+------------------------+"
