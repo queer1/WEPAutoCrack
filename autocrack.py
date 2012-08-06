@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #
-# Copyright 2011 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
+# Copyright 2011-2012 Jason A. Donenfeld <Jason@zx2c4.com>. All Rights Reserved.
 #
 #
 # --------- WEPAutoCrack ----------
@@ -34,9 +34,9 @@ def pwn(interface, network):
 	print "[+] Shutting down services"
 
 	# BEGIN CHANGE ME
-	os.system("systemctl stop wpa_supplicant@wlan0.service")
-	os.system("systemctl stop dhcpcd.service")
-	os.system("systemctl stop avahi-daemon.service")
+	os.system("/etc/init.d/wpa_supplicant stop")
+	os.system("/etc/init.d/dhcpcd stop")
+	os.system("/etc/init.d/avahi-daemon stop")
 	# END CHANGE ME
 
 	print "[+] Acquiring MAC address:",
@@ -123,9 +123,9 @@ cat /usr/share/dict/* | aircrack-ng -w - -b BSSID psk*.cap
 
 	print "[+] Starting stopped services"
 	# BEGIN CHANGE ME
-	os.system("systemctl start wpa_supplicant@wlan0.service")
-	os.system("systemctl start dhcpcd.service")
-	os.system("systemctl start avahi-daemon.service")
+	os.system("/etc/init.d/wpa_supplicant start")
+	os.system("/etc/init.d/dhcpcd start")
+	os.system("/etc/init.d/avahi-daemon start")
 	# END CHANGE ME
 
 def get_name(cell):
