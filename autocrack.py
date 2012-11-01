@@ -36,7 +36,6 @@ def pwn(interface, network):
 	# BEGIN CHANGE ME
 	os.system("/etc/init.d/wpa_supplicant stop")
 	os.system("/etc/init.d/dhcpcd stop")
-	os.system("/etc/init.d/avahi-daemon stop")
 	# END CHANGE ME
 
 	print "[+] Acquiring MAC address:",
@@ -125,7 +124,6 @@ cat /usr/share/dict/* | aircrack-ng -w - -b BSSID psk*.cap
 	# BEGIN CHANGE ME
 	os.system("/etc/init.d/wpa_supplicant start")
 	os.system("/etc/init.d/dhcpcd start")
-	os.system("/etc/init.d/avahi-daemon start")
 	# END CHANGE ME
 
 def get_name(cell):
