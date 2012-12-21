@@ -29,20 +29,45 @@
 import sys
 import subprocess
 import os
+import signal
 
 def pwn(interface, network):
 	print "[+] Shutting down services"
-
-	# BEGIN CHANGE ME
-	os.system("/etc/init.d/wpa_supplicant stop")
-	os.system("/etc/init.d/dhcpcd stop")
-	# END CHANGE ME
 
 	print "[+] Acquiring MAC address:",
 	f = open("/sys/class/net/%s/address" % interface, "r")
 	realMac = f.read().strip().upper()
 	f.close()
 	print realMac
+
+	def restore(signum=None, frame=None):
+		try:
+			proc.terminate()
+		except:
+			pass
+		os.system("reset")
+
+		print "[+] Restoring wifi card"
+		os.system("ifconfig %s down" % interface)
+		os.system("macchanger -m %s %s" % (realMac, interface))
+		os.system("iwconfig %s mode managed" % interface)
+		os.system("ifconfig %s up" % interface)
+
+		print "[+] Starting stopped services"
+		# BEGIN CHANGE ME
+		os.system("/etc/init.d/wpa_supplicant start")
+		os.system("/etc/init.d/dhcpcd start")
+		# END CHANGE ME
+
+		sys.exit(0)
+
+	signal.signal(signal.SIGTERM, restore)
+	signal.signal(signal.SIGINT, restore)
+
+	# BEGIN CHANGE ME
+	os.system("/etc/init.d/wpa_supplicant stop")
+	os.system("/etc/init.d/dhcpcd stop")
+	# END CHANGE ME
 
 	print "[+] Setting fake MAC address"
 	os.system("ifconfig %s down" % interface)
@@ -113,18 +138,8 @@ cat /usr/share/dict/* | aircrack-ng -w - -b BSSID psk*.cap
 	proc = subprocess.Popen("less", stdin=subprocess.PIPE)
 	proc.communicate(input=instructions)
 	proc.wait()
-	
-	print "[+] Restoring wifi card"
-	os.system("ifconfig %s down" % interface)
-	os.system("macchanger -m %s %s" % (realMac, interface))
-	os.system("iwconfig %s mode managed" % interface)
-	os.system("ifconfig %s up" % interface)
 
-	print "[+] Starting stopped services"
-	# BEGIN CHANGE ME
-	os.system("/etc/init.d/wpa_supplicant start")
-	os.system("/etc/init.d/dhcpcd start")
-	# END CHANGE ME
+	restore()
 
 def get_name(cell):
 	return matching_line(cell, "ESSID:")[1:-1]
