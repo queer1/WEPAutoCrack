@@ -271,7 +271,11 @@ def main():
 	for cell in parsed_cells:
 		if cell["Encryption"] != "Open":
 			encrypted_cells.append(cell)
-	
+
+	if len(encrypted_cells) == 0:
+		print "[-] Could not find any wireless networks. Goodbye."
+		return
+
 	print_cells(encrypted_cells)
 	print
 	try:
