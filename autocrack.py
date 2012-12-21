@@ -30,6 +30,7 @@ import sys
 import subprocess
 import os
 import signal
+import time
 
 def pwn(interface, network):
 	print "[+] Shutting down services"
@@ -50,6 +51,15 @@ def pwn(interface, network):
 		print "[+] Restoring wifi card"
 		os.system("ifconfig %s down" % interface)
 		os.system("macchanger -m %s %s" % (realMac, interface))
+
+		# BEGIN CHANGE OR REMOVE ME
+		print "[+] Resetting module to work around driver bugs"
+		os.system("rmmod iwldvm")
+		os.system("rmmod iwlwifi")
+		os.system("modprobe iwlwifi")
+		time.sleep(2)
+		# END CHANGE OR REMOVE ME
+
 		os.system("iwconfig %s mode managed" % interface)
 		os.system("ifconfig %s up" % interface)
 
