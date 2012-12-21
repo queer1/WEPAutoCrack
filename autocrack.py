@@ -33,8 +33,6 @@ import signal
 import time
 
 def pwn(interface, network):
-	print "[+] Shutting down services"
-
 	print "[+] Acquiring MAC address:",
 	f = open("/sys/class/net/%s/address" % interface, "r")
 	realMac = f.read().strip().upper()
@@ -74,6 +72,7 @@ def pwn(interface, network):
 	signal.signal(signal.SIGTERM, restore)
 	signal.signal(signal.SIGINT, restore)
 
+	print "[+] Shutting down services"
 	# BEGIN CHANGE ME
 	os.system("/etc/init.d/wpa_supplicant stop")
 	os.system("/etc/init.d/dhcpcd stop")
