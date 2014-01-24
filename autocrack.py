@@ -80,7 +80,7 @@ def pwn(interface, network):
 
 	print "[+] Setting fake MAC address"
 	os.system("ifconfig %s down" % interface)
-	os.system("macchanger -r %s" % interface)
+	os.system("macchanger -A %s" % interface)
 	f = open("/sys/class/net/%s/address" % interface, "r")
 	mac = f.read().strip().upper()
 	f.close()
