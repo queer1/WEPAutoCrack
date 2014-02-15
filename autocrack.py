@@ -63,8 +63,8 @@ def pwn(interface, network):
 
 		print "[+] Starting stopped services"
 		# BEGIN CHANGE ME
-		os.system("/etc/init.d/wpa_supplicant start")
-		os.system("/etc/init.d/dhcpcd start")
+		os.system("systemctl start wpa_supplicant@%s.service" % interface)
+		os.system("systemctl start dhcpcd.service")
 		# END CHANGE ME
 
 		sys.exit(0)
@@ -74,8 +74,8 @@ def pwn(interface, network):
 
 	print "[+] Shutting down services"
 	# BEGIN CHANGE ME
-	os.system("/etc/init.d/wpa_supplicant stop")
-	os.system("/etc/init.d/dhcpcd stop")
+	os.system("systemctl stop wpa_supplicant@%s.service" % interface)
+	os.system("systemctl stop dhcpcd.service")
 	# END CHANGE ME
 
 	print "[+] Setting fake MAC address"
